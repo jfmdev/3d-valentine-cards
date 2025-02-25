@@ -12,7 +12,7 @@ import {
 // --- Constants --- //
 
 const CANVAS_SELECTOR = '#myCanvas';
-const ROTATION_SPEED = 2;
+const ROTATION_SPEED = 3;
 
 const TEXTS = ['Hello three.js!', 'Goodbye three.js?'];
 
@@ -30,11 +30,12 @@ let iteration = -1;
 let font = null;
 
 let heartObj = null;
-let textObj = null;
+let textObj1 = null;
+let textObj2 = null;
 
 // --- Functions --- //
 
-function addText(message) {
+function addText(message, isBack) {
   const geometry = new TextGeometry(message, {
     font: font,
     size: 80,
@@ -52,7 +53,7 @@ function addText(message) {
     color: 0xffdfdf
   })
   const mesh = new THREE.Mesh(geometry, pinkMaterial);
-  mesh.scale.set(0.008, 0.008, 0.008);
+  mesh.scale.set(0.006, 0.006, 0.006);
 
   var pivot = new THREE.Object3D();
   pivot.add(mesh);
@@ -61,7 +62,13 @@ function addText(message) {
   mesh.position.z = 1;
 
   scene.add(pivot);
-  textObj = pivot
+
+  if(isBack) {
+    pivot.rotation.y = Math.PI;
+    textObj2 = pivot;
+  } else {
+    textObj1 = pivot;   
+  }
 }
 
 function initialize() {
@@ -119,6 +126,7 @@ function initialize() {
   fontLoader.load('./assets/helvetiker_regular.typeface.json', function(loadedFont) {
     font = loadedFont;
     addText('Hello Three.js!');
+    addText('Goodbye Three.js?', true);
   });
 
   window.requestAnimationFrame(renderAnimation);
@@ -139,8 +147,7 @@ function renderAnimation(time) {
   let delta = time - lastRenderTime;
   lastRenderTime = time
 
-  if (heartObj && textObj && rotating) {
-    let stop = false;
+  if (heartObj && rotating) {
     const rot = delta * ROTATION_SPEED;
 
     const previous = heartObj.rotation.y;
@@ -156,7 +163,8 @@ function renderAnimation(time) {
     }
 
     heartObj.rotation.y = current;
-    textObj.rotation.y = current;
+    textObj1.rotation.y = current;
+    textObj2.rotation.y = current + Math.PI;
   }
 
   if (resizeRendererToDisplaySize(renderer)) {
