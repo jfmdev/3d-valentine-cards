@@ -14,7 +14,11 @@ import {
 const CANVAS_SELECTOR = '#myCanvas';
 const ROTATION_SPEED = 3;
 
-const TEXTS = ['Hello three.js!', 'Goodbye three.js?'];
+const TEXTS = [
+  ['Roses are red,', 'violets are blue'],
+  ['Honey is sweet,', 'and so are you.'],
+];
+
 const INSTRUCTION = 'Touch to start'
 
 // --- Shared variables --- //
@@ -36,16 +40,22 @@ let backPivot = null;
 
 // --- Functions --- //
 
-function addText(message, isBack) {
-  const mainMesh = createTextMesh(message, 0xe060e0, 0.006)
-  mainMesh.position.z = 1;
+function addText(messages, isBack) {
+  const mainMeshes = messages.map(function(message, index) {
+    const myMesh = createTextMesh(message, 0xe060e0, 0.003)
+    myMesh.position.z = 1;
+    myMesh.position.y = 0.2 - (0.3 * index)
+    return myMesh
+  })
 
-  const instructionMesh = createTextMesh(INSTRUCTION, 0x808000, 0.003)
+  const instructionMesh = createTextMesh(INSTRUCTION, 0x808000, 0.002)
   instructionMesh.position.z = 1;
-  instructionMesh.position.y = -1;
+  instructionMesh.position.y = -1.3;
 
   let pivot = new THREE.Object3D();
-  pivot.add(mainMesh);
+  mainMeshes.forEach(function(mainMesh) {
+    pivot.add(mainMesh);
+  })
   pivot.add(instructionMesh);
 
   scene.add(pivot);
@@ -136,8 +146,8 @@ function initialize() {
   const fontLoader = new FontLoader();
   fontLoader.load('./assets/helvetiker_regular.typeface.json', function(loadedFont) {
     font = loadedFont;
-    addText('Hello Three.js!');
-    addText('Goodbye Three.js?', true);
+    addText(TEXTS[0]);
+    addText(TEXTS[1], true);
   });
 
   window.requestAnimationFrame(renderAnimation);
