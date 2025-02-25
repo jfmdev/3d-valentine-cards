@@ -15,6 +15,7 @@ const CANVAS_SELECTOR = '#myCanvas';
 const ROTATION_SPEED = 3;
 
 const TEXTS = ['Hello three.js!', 'Goodbye three.js?'];
+const INSTRUCTION = 'Touch to start'
 
 // --- Shared variables --- //
 
@@ -30,12 +31,38 @@ let iteration = -1;
 let font = null;
 
 let heartObj = null;
-let textObj1 = null;
-let textObj2 = null;
+let frontPivot = null;
+let backPivot = null;
 
 // --- Functions --- //
 
 function addText(message, isBack) {
+  const mainMesh = createTextMesh(message, 0xe060e0, 0.006)
+  mainMesh.position.z = 1;
+
+  const instructionMesh = createTextMesh(INSTRUCTION, 0x808000, 0.003)
+  instructionMesh.position.z = 1;
+  instructionMesh.position.y = -1;
+
+  let pivot = new THREE.Object3D();
+  pivot.add(mainMesh);
+  pivot.add(instructionMesh);
+
+  scene.add(pivot);
+
+  if (isBack) {
+    pivot.rotation.y = Math.PI;
+    backPivot = pivot;
+  } else {
+    frontPivot = pivot;
+  }
+}
+
+function createTextMesh(message, color, size) {
+  const material = new THREE.MeshStandardMaterial({
+    color: color
+  })
+
   const geometry = new TextGeometry(message, {
     font: font,
     size: 80,
@@ -43,32 +70,16 @@ function addText(message, isBack) {
     curveSegments: 12,
     bevelEnabled: true,
     bevelThickness: 10,
-    bevelSize: 8,
+    bevelSize: 4,
     bevelOffset: 0,
     bevelSegments: 5
   });
-
   geometry.center();
-  const pinkMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffdfdf
-  })
-  const mesh = new THREE.Mesh(geometry, pinkMaterial);
-  mesh.scale.set(0.006, 0.006, 0.006);
 
-  var pivot = new THREE.Object3D();
-  pivot.add(mesh);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.scale.set(size, size, size);
 
-  // Move object away from pivot
-  mesh.position.z = 1;
-
-  scene.add(pivot);
-
-  if(isBack) {
-    pivot.rotation.y = Math.PI;
-    textObj2 = pivot;
-  } else {
-    textObj1 = pivot;   
-  }
+  return mesh;
 }
 
 function initialize() {
@@ -163,8 +174,8 @@ function renderAnimation(time) {
     }
 
     heartObj.rotation.y = current;
-    textObj1.rotation.y = current;
-    textObj2.rotation.y = current + Math.PI;
+    frontPivot.rotation.y = current;
+    backPivot.rotation.y = current + Math.PI;
   }
 
   if (resizeRendererToDisplaySize(renderer)) {
