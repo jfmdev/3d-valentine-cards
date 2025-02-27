@@ -15,11 +15,12 @@ const CANVAS_SELECTOR = '#myCanvas';
 const ROTATION_SPEED = 3;
 
 const TEXTS = [
+  ['Happy', 'Valentines Day!'],
   ['Roses are red,', 'violets are blue'],
   ['Honey is sweet,', 'and so are you.'],
 ];
 
-const INSTRUCTION = 'Touch to start'
+const INSTRUCTIONS = ['Touch to start', 'Touch to continue'];
 
 // --- Shared variables --- //
 
@@ -34,7 +35,7 @@ let iteration = -1;
 
 let font = null;
 
-let heartObj = null;
+let mainPivot = null;
 let frontPivot = null;
 let backPivot = null;
 
@@ -48,24 +49,15 @@ function addText(messages, isBack) {
     return myMesh
   })
 
-  const instructionMesh = createTextMesh(INSTRUCTION, 0x808000, 0.002)
+  const instructionMesh = createTextMesh(INSTRUCTIONS[0], 0x808000, 0.002)
   instructionMesh.position.z = 1;
   instructionMesh.position.y = -1.3;
 
-  let pivot = new THREE.Object3D();
+  const pivot = isBack ? backPivot : frontPivot;
   mainMeshes.forEach(function(mainMesh) {
     pivot.add(mainMesh);
   })
   pivot.add(instructionMesh);
-
-  scene.add(pivot);
-
-  if (isBack) {
-    pivot.rotation.y = Math.PI;
-    backPivot = pivot;
-  } else {
-    frontPivot = pivot;
-  }
 }
 
 function createTextMesh(message, color, size) {
@@ -115,6 +107,17 @@ function initialize() {
   scene.background = new THREE.Color().setHex(0xFFFFFF);
   renderer.render(scene, camera);
 
+  // Pivots.
+  mainPivot = new THREE.Object3D();
+  scene.add(mainPivot);
+
+  frontPivot = new THREE.Object3D();
+  mainPivot.add(frontPivot);
+
+  backPivot = new THREE.Object3D();
+  backPivot.rotation.y = Math.PI;
+  mainPivot.add(backPivot);
+
   // Light.
   const color = 0xFFFFFF;
   const intensity = 3;
@@ -123,22 +126,21 @@ function initialize() {
   scene.add(light);
 
   const loader = new OBJLoader();
-  loader.load('./models/heart-v2.obj', function(loadedObj) {
+  loader.load('./models/heart-v2.obj', function(heartObj) {
     const redMaterial = new THREE.MeshStandardMaterial({
       color: 0xff0000
     })
 
-    loadedObj.traverse((mesh) => {
+    heartObj.traverse((mesh) => {
       mesh.material = redMaterial;
     });
 
-    loadedObj.position.x = 0;
-    loadedObj.position.y = -0.4;
-    loadedObj.position.z = 0;
-    loadedObj.scale.set(0.15, 0.15, 0.15);
+    heartObj.position.x = 0;
+    heartObj.position.y = -0.4;
+    heartObj.position.z = 0;
+    heartObj.scale.set(0.15, 0.15, 0.15);
 
-    scene.add(loadedObj);
-    heartObj = loadedObj;
+    mainPivot.add(heartObj);
   }, undefined, function(error) {
     console.error(error);
   });
@@ -168,10 +170,10 @@ function renderAnimation(time) {
   let delta = time - lastRenderTime;
   lastRenderTime = time
 
-  if (heartObj && rotating) {
+  if (rotating) {
     const rot = delta * ROTATION_SPEED;
 
-    const previous = heartObj.rotation.y;
+    const previous = mainPivot.rotation.y;
     let current = previous + rot;
 
     // The 180 and 360 degrees positions are breaking points.
@@ -183,9 +185,7 @@ function renderAnimation(time) {
       rotating = false;
     }
 
-    heartObj.rotation.y = current;
-    frontPivot.rotation.y = current;
-    backPivot.rotation.y = current + Math.PI;
+    mainPivot.rotation.y = current;
   }
 
   if (resizeRendererToDisplaySize(renderer)) {
