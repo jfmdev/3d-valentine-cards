@@ -31,7 +31,7 @@ let scene = null;
 let lastRenderTime = 0;
 
 let rotating = false;
-let iteration = -1;
+let iteration = 0;
 
 let font = null;
 
@@ -41,23 +41,41 @@ let backPivot = null;
 
 // --- Functions --- //
 
-function addText(messages, isBack) {
+function addTexts(messages, instruction, pivot) {
   const mainMeshes = messages.map(function(message, index) {
     const myMesh = createTextMesh(message, 0xe060e0, 0.003)
     myMesh.position.z = 1;
     myMesh.position.y = 0.2 - (0.3 * index)
     return myMesh
   })
-
-  const instructionMesh = createTextMesh(INSTRUCTIONS[0], 0x808000, 0.002)
-  instructionMesh.position.z = 1;
-  instructionMesh.position.y = -1.3;
-
-  const pivot = isBack ? backPivot : frontPivot;
   mainMeshes.forEach(function(mainMesh) {
     pivot.add(mainMesh);
   })
-  pivot.add(instructionMesh);
+
+  if (instruction) {
+    const instructionMesh = createTextMesh(instruction, 0x808000, 0.002)
+    instructionMesh.position.z = 1;
+    instructionMesh.position.y = -1.3;
+    pivot.add(instructionMesh);
+  }
+}
+
+function animationStart() {
+  rotating = true;
+  iteration = (iteration + 1) % TEXTS.length;
+
+  const hiddenPivot = mainPivot.rotation.y < Math.PI ? backPivot : frontPivot;
+  addTexts(TEXTS[iteration], iteration === 0 ? INSTRUCTIONS[0] : iteration < TEXTS.length - 1 ? INSTRUCTIONS[1] : null, hiddenPivot)
+}
+
+function animationStop() {
+  rotating = false;
+
+  const hiddenPivot = mainPivot.rotation.y < Math.PI ? backPivot : frontPivot;
+  const hiddenChildren = hiddenPivot.children.slice();
+  hiddenChildren.forEach(function(child) {
+    hiddenPivot.remove(child)
+  })
 }
 
 function createTextMesh(message, color, size) {
@@ -148,24 +166,15 @@ function initialize() {
   const fontLoader = new FontLoader();
   fontLoader.load('./assets/helvetiker_regular.typeface.json', function(loadedFont) {
     font = loadedFont;
-    addText(TEXTS[0]);
-    addText(TEXTS[1], true);
+
+    addTexts(TEXTS[0], INSTRUCTIONS[0], frontPivot);
   });
 
-  window.requestAnimationFrame(renderAnimation);
+  window.requestAnimationFrame(mainRender);
 }
 
-function onPointerDown() {
-  if (!rotating) {
-    rotating = true;
-    iteration = (iteration + 1) % TEXTS.length;
-  } else {
-    rotating = false;
-  }
-}
-
-function renderAnimation(time) {
-  time *= 0.001; // convert time to seconds
+function mainRender(time) {
+  time *= 0.001; // Convert time to seconds.
 
   let delta = time - lastRenderTime;
   lastRenderTime = time
@@ -177,15 +186,20 @@ function renderAnimation(time) {
     let current = previous + rot;
 
     // The 180 and 360 degrees positions are breaking points.
+    let shouldStop = false;
     if (current >= 2 * Math.PI) {
       current = 0;
-      rotating = false;
+      shouldStop = true;
     } else if (previous < Math.PI && current >= Math.PI) {
       current = Math.PI;
-      rotating = false;
+      shouldStop = true;
     }
 
     mainPivot.rotation.y = current;
+
+    if (shouldStop) {
+      animationStop();
+    }
   }
 
   if (resizeRendererToDisplaySize(renderer)) {
@@ -195,7 +209,13 @@ function renderAnimation(time) {
   }
 
   renderer.render(scene, camera);
-  window.requestAnimationFrame(renderAnimation);
+  window.requestAnimationFrame(mainRender);
+}
+
+function onPointerDown() {
+  if (!rotating) {
+    animationStart();
+  }
 }
 
 function resizeRendererToDisplaySize(renderer) {
