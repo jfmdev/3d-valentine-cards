@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+      <title>Happy Valentines Day!</title>
+      <link rel="icon" type="image/x-icon" href="./images/favicon.png">
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          background-color: #f2f2f2;
+        }
+
+        #container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          min-height: 100vh;
+        }
+
+        @media (orientation: landscape) {
+          #myCanvas {
+            height: 100vh;
+            width: 100vh;
+          }
+        }
+
+        @media (orientation: portrait) {
+          #myCanvas {
+            height: 100vw;
+            width: 100vw;
+          }
+        }        
+      </style>
+    <script type="module" crossorigin src="./assets/rotating-H9Z_Npjx.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/TextGeometry-1DrgTbvJ.js">
+  </head>
+  <body>
+    <div id="container">
+      <canvas id="myCanvas"></canvas>
+    </div>
+  </body>
+</html>
