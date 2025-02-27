@@ -164,7 +164,7 @@ function initialize() {
   });
 
   const fontLoader = new FontLoader();
-  fontLoader.load('./assets/helvetiker_regular.typeface.json', function(loadedFont) {
+  fontLoader.load('./fonts/helvetiker_regular.typeface.json', function(loadedFont) {
     font = loadedFont;
 
     addTexts(TEXTS[0], INSTRUCTIONS[0], frontPivot);
