@@ -14,6 +14,8 @@ import {
 const CANVAS_SELECTOR = '#myCanvas';
 const ROTATION_SPEED = 3;
 
+const COLORS = [0xe060e0, 0x60e0e0, 0x60e080];
+
 const TEXTS = [
   ['Happy', 'Valentines Day!'],
   ['Roses are red,', 'violets are blue'],
@@ -43,7 +45,7 @@ let backPivot = null;
 
 function addTexts(messages, instruction, pivot) {
   const mainMeshes = messages.map(function(message, index) {
-    const myMesh = createTextMesh(message, 0xe060e0, 0.003)
+    const myMesh = createTextMesh(message, COLORS[iteration % COLORS.length], 0.003)
     myMesh.position.z = 1;
     myMesh.position.y = 0.2 - (0.3 * index)
     return myMesh
