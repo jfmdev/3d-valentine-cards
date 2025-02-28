@@ -12,17 +12,39 @@ import {
 // --- Constants --- //
 
 const CANVAS_SELECTOR = '#myCanvas';
-const ROTATION_SPEED = 3;
 
-const COLORS = [0xe060e0, 0x60e0e0, 0x60e080];
+const HEART_FALL_SPEED = 2;
+const HEART_ROTATION_SPEED = 2;
 
-const TEXTS = [
-  ['Happy', 'Valentines Day!'],
-  ['Roses are red,', 'violets are blue'],
-  ['Honey is sweet,', 'and so are you.'],
+const PIVOT_ROTATION_SPEED = 4;
+
+const MATERIALS = [
+  new THREE.MeshStandardMaterial({
+    color: 0xff0000
+  }),
+  new THREE.MeshStandardMaterial({
+    color: 0xff80d0
+  }),
+  new THREE.MeshStandardMaterial({
+    color: 0xff0080
+  }),
 ];
 
-const INSTRUCTIONS = ['Touch to start', 'Touch to continue'];
+const HEARTS_DEPTHS = [
+  { xRange: [-14, 14], yRange: [-15.8, 15.5], z: -16, limit: 6 },
+  { xRange: [-8, 8], yRange: [-9.7, 9.4], z: -8, limit: 4 },
+  { xRange: [-3.5, 3.5], yRange: [-5.1, 4.8], z: -2, limit: 2 },
+];
+
+const LETTER_DEPTH = 1;
+
+const LETTER_TEXT = [
+  'Happy', 'Valentines Day!',
+  'Roses are red,', 'violets are blue',
+  'Honey is sweet,', 'and so are you.'
+];
+
+const INTRO_TEXT = 'Touch to open';
 
 // --- Shared variables --- //
 
@@ -33,51 +55,59 @@ let scene = null;
 let lastRenderTime = 0;
 
 let rotating = false;
-let iteration = 0;
+let animate = false;
 
 let font = null;
+let hearts = [];
 
-let mainPivot = null;
-let frontPivot = null;
 let backPivot = null;
+let mainPivot = null;
 
 // --- Functions --- //
 
-function addTexts(messages, instruction, pivot) {
-  const mainMeshes = messages.map(function(message, index) {
-    const myMesh = createTextMesh(message, COLORS[iteration % COLORS.length], 0.003)
-    myMesh.position.z = 1;
-    myMesh.position.y = 0.2 - (0.3 * index)
-    return myMesh
-  })
-  mainMeshes.forEach(function(mainMesh) {
-    pivot.add(mainMesh);
-  })
-
-  if (instruction) {
-    const instructionMesh = createTextMesh(instruction, 0x808000, 0.002)
-    instructionMesh.position.z = 1;
-    instructionMesh.position.y = -1.3;
-    pivot.add(instructionMesh);
+async function addHeart(position) {
+  let newHeart;
+  if(hearts.length === 0) {
+    newHeart = await loadHeartModel()
+  } else {
+    newHeart = hearts[0].clone()
   }
+
+  const material = MATERIALS[Math.floor(Math.random()*MATERIALS.length)];
+  newHeart.traverse((mesh) => {
+    mesh.material = material;
+  });
+
+  newHeart.position.x = position.x;
+  newHeart.position.y = position.y;
+  newHeart.position.z = position.z;
+
+  newHeart.rotation.y = Math.random()*Math.PI;
+
+  scene.add(newHeart);
+  hearts.push(newHeart)
+}
+
+function loadHeartModel() {
+  return new Promise(function(resolve, reject) {
+    const loader = new OBJLoader();
+    loader.load('./models/heart-v2.obj', function(newHeart) {  
+      newHeart.scale.set(0.1, 0.1, 0.1);
+  
+      resolve(newHeart);
+    }, undefined, function(error) {
+      reject(error);
+    });
+  });
 }
 
 function animationStart() {
+  animate = true;
   rotating = true;
-  iteration = (iteration + 1) % TEXTS.length;
-
-  const hiddenPivot = mainPivot.rotation.y < Math.PI ? backPivot : frontPivot;
-  addTexts(TEXTS[iteration], iteration === 0 ? INSTRUCTIONS[0] : iteration < TEXTS.length - 1 ? INSTRUCTIONS[1] : null, hiddenPivot)
 }
 
 function animationStop() {
   rotating = false;
-
-  const hiddenPivot = mainPivot.rotation.y < Math.PI ? backPivot : frontPivot;
-  const hiddenChildren = hiddenPivot.children.slice();
-  hiddenChildren.forEach(function(child) {
-    hiddenPivot.remove(child)
-  })
 }
 
 function createTextMesh(message, color, size) {
@@ -104,7 +134,7 @@ function createTextMesh(message, color, size) {
   return mesh;
 }
 
-function initialize() {
+async function initialize() {
   const canvas = document.querySelector(CANVAS_SELECTOR);
   renderer = new THREE.WebGLRenderer({
     antialias: true,
@@ -127,12 +157,10 @@ function initialize() {
   scene.background = new THREE.Color().setHex(0xFFFFFF);
   renderer.render(scene, camera);
 
-  // Pivots.
+  // PivotS.
   mainPivot = new THREE.Object3D();
+  mainPivot.position.z = LETTER_DEPTH;
   scene.add(mainPivot);
-
-  frontPivot = new THREE.Object3D();
-  mainPivot.add(frontPivot);
 
   backPivot = new THREE.Object3D();
   backPivot.rotation.y = Math.PI;
@@ -145,32 +173,49 @@ function initialize() {
   light.position.set(-1, 2, 4);
   scene.add(light);
 
-  const loader = new OBJLoader();
-  loader.load('./models/heart-v2.obj', function(heartObj) {
-    const redMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff0000
-    })
-
-    heartObj.traverse((mesh) => {
-      mesh.material = redMaterial;
-    });
-
-    heartObj.position.x = 0;
-    heartObj.position.y = -0.4;
-    heartObj.position.z = 0;
-    heartObj.scale.set(0.15, 0.15, 0.15);
-
-    mainPivot.add(heartObj);
-  }, undefined, function(error) {
-    console.error(error);
-  });
-
+  // Font and texts.
   const fontLoader = new FontLoader();
   fontLoader.load('./fonts/helvetiker_regular.typeface.json', function(loadedFont) {
     font = loadedFont;
 
-    addTexts(TEXTS[0], INSTRUCTIONS[0], frontPivot);
+    const letterMeshes = LETTER_TEXT.map(function(message, index) {
+      const letterMesh = createTextMesh(message, 0xff0080, 0.0015);
+      letterMesh.position.z = 0.1;
+      letterMesh.position.y = 0.2 * (LETTER_TEXT.length/2 - (index + 0.5));
+      return letterMesh;
+    })
+    letterMeshes.forEach(function(letterMesh) {
+      backPivot.add(letterMesh);
+    })
+  
+    const introMesh = createTextMesh(INTRO_TEXT, 0x808000, 0.002)
+    introMesh.position.z = 0.1;
+    mainPivot.add(introMesh);
   });
+
+  // Hearts.
+  for(let i=0; i<HEARTS_DEPTHS.length; i++) {
+    const depth = HEARTS_DEPTHS[i];
+    const ySubrangeLength = (depth.xRange[1] - depth.xRange[0])/depth.limit;
+    for(let j=0; j<depth.limit; j++) {
+      const ySubrange = [
+        j*ySubrangeLength + depth.xRange[0],
+        (j+1)*ySubrangeLength + depth.xRange[0]
+      ];
+
+      await addHeart({
+        x: randomBetween(depth.xRange[0], depth.xRange[1]),
+        y: randomBetween(ySubrange[0], ySubrange[1]),
+        z: depth.z
+      });
+    }    
+  }  
+
+  // Letter.
+  const geometry = new THREE.BoxGeometry(2, 1.5, 0.05); 
+  const material = new THREE.MeshStandardMaterial( {color: 0xe8e8e8} ); 
+  const cube = new THREE.Mesh(geometry, material);
+  mainPivot.add(cube);
 
   window.requestAnimationFrame(mainRender);
 }
@@ -181,27 +226,39 @@ function mainRender(time) {
   let delta = time - lastRenderTime;
   lastRenderTime = time
 
+  // Letter.
   if (rotating) {
-    const rot = delta * ROTATION_SPEED;
-
     const previous = mainPivot.rotation.y;
-    let current = previous + rot;
+    let current = previous + delta * PIVOT_ROTATION_SPEED;
 
-    // The 180 and 360 degrees positions are breaking points.
-    let shouldStop = false;
+    // Note that the 180 and 360 degrees positions are breaking points.
     if (current >= 2 * Math.PI) {
       current = 0;
-      shouldStop = true;
+      animationStop();
     } else if (previous < Math.PI && current >= Math.PI) {
       current = Math.PI;
-      shouldStop = true;
-    }
-
-    mainPivot.rotation.y = current;
-
-    if (shouldStop) {
       animationStop();
     }
+    mainPivot.rotation.y = current;
+  }
+
+  // Hearts.
+  if(animate) {
+    const deltaRot = delta * HEART_ROTATION_SPEED;
+    const deltaMov = delta * HEART_FALL_SPEED;
+    hearts.forEach(function(heart) {
+      heart.rotation.y = heart.rotation.y + deltaRot;
+      if(heart.rotation.y > 2*Math.PI) {
+        heart.rotation.y -= 2*Math.PI;
+      }
+
+      heart.position.y = heart.position.y + deltaMov;
+      const depth = HEARTS_DEPTHS.find(item => item.z === heart.position.z);
+      if(depth && heart.position.y > depth.yRange[1]) {
+        heart.position.y = depth.yRange[0];
+        heart.position.x = randomBetween(depth.xRange[0], depth.xRange[1]);
+      }
+    });
   }
 
   if (resizeRendererToDisplaySize(renderer)) {
@@ -218,6 +275,10 @@ function onPointerDown() {
   if (!rotating) {
     animationStart();
   }
+}
+
+function randomBetween(min, max) {
+  return Math.random()*(max - min) + min;
 }
 
 function resizeRendererToDisplaySize(renderer) {
