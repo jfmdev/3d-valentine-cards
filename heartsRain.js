@@ -13,8 +13,8 @@ import {
 
 const CANVAS_SELECTOR = '#myCanvas';
 
-const HEART_FALL_SPEED = 2;
-const HEART_ROTATION_SPEED = 2;
+const HEART_FALL_SPEED = 1.3;
+const HEART_ROTATION_SPEED = 1.2;
 
 const PIVOT_ROTATION_SPEED = 4;
 
@@ -30,13 +30,44 @@ const MATERIALS = [
   }),
 ];
 
-const HEARTS_DEPTHS = [
-  { xRange: [-14, 14], yRange: [-15.8, 15.5], z: -16, limit: 6 },
-  { xRange: [-8, 8], yRange: [-9.7, 9.4], z: -8, limit: 4 },
-  { xRange: [-3.5, 3.5], yRange: [-5.1, 4.8], z: -2, limit: 2 },
+const HEARTS_DEPTHS = [{
+    xRange: [-11, 11],
+    yRange: [-11.9, 11.8],
+    z: -12,
+    limit: 6,
+    scale: 0.03
+  },
+  {
+    xRange: [-8, 8],
+    yRange: [-9, 8.8],
+    z: -8,
+    limit: 4,
+    scale: 0.03,
+  },
+  {
+    xRange: [-3.5, 3.5],
+    yRange: [-4.3, 4.2],
+    z: -2,
+    limit: 2,
+    scale: 0.03
+  },
+  {
+    xRange: [-1.5, -1],
+    yRange: [-2.2, 2],
+    z: 1,
+    limit: 1,
+    scale: 0.03
+  },
+  {
+    xRange: [1, 1.5],
+    yRange: [-2.2, 2],
+    z: 1.01,
+    limit: 1,
+    scale: 0.03
+  },
 ];
 
-const LETTER_DEPTH = 1;
+const LETTER_DEPTH = 0;
 
 const LETTER_TEXT = [
   'Happy', 'Valentines Day!',
@@ -65,15 +96,20 @@ let mainPivot = null;
 
 // --- Functions --- //
 
-async function addHeart(position) {
+async function addHeart(position, scale) {
   let newHeart;
-  if(hearts.length === 0) {
+  if (hearts.length === 0) {
     newHeart = await loadHeartModel()
   } else {
     newHeart = hearts[0].clone()
   }
 
-  const material = MATERIALS[Math.floor(Math.random()*MATERIALS.length)];
+  if (!scale) {
+    scale = 0.1;
+  }
+  newHeart.scale.set(scale, scale, scale);
+
+  const material = MATERIALS[Math.floor(Math.random() * MATERIALS.length)];
   newHeart.traverse((mesh) => {
     mesh.material = material;
   });
@@ -82,7 +118,7 @@ async function addHeart(position) {
   newHeart.position.y = position.y;
   newHeart.position.z = position.z;
 
-  newHeart.rotation.y = Math.random()*Math.PI;
+  newHeart.rotation.y = Math.random() * Math.PI;
 
   scene.add(newHeart);
   hearts.push(newHeart)
@@ -91,9 +127,7 @@ async function addHeart(position) {
 function loadHeartModel() {
   return new Promise(function(resolve, reject) {
     const loader = new OBJLoader();
-    loader.load('./models/heart-v2.obj', function(newHeart) {  
-      newHeart.scale.set(0.1, 0.1, 0.1);
-  
+    loader.load('./models/heart-v2.obj', function(newHeart) {
       resolve(newHeart);
     }, undefined, function(error) {
       reject(error);
@@ -179,41 +213,45 @@ async function initialize() {
     font = loadedFont;
 
     const letterMeshes = LETTER_TEXT.map(function(message, index) {
-      const letterMesh = createTextMesh(message, 0xff0080, 0.0015);
+      const letterMesh = createTextMesh(message, 0xff0080, 0.0023);
       letterMesh.position.z = 0.1;
-      letterMesh.position.y = 0.2 * (LETTER_TEXT.length/2 - (index + 0.5));
+      letterMesh.position.y = 0.3 * (LETTER_TEXT.length / 2 - (index + 0.5));
       return letterMesh;
     })
     letterMeshes.forEach(function(letterMesh) {
       backPivot.add(letterMesh);
     })
-  
-    const introMesh = createTextMesh(INTRO_TEXT, 0x808000, 0.002)
+
+    const introMesh = createTextMesh(INTRO_TEXT, 0x808000, 0.0025)
     introMesh.position.z = 0.1;
     mainPivot.add(introMesh);
   });
 
   // Hearts.
-  for(let i=0; i<HEARTS_DEPTHS.length; i++) {
+  for (let i = 0; i < HEARTS_DEPTHS.length; i++) {
     const depth = HEARTS_DEPTHS[i];
-    const ySubrangeLength = (depth.xRange[1] - depth.xRange[0])/depth.limit;
-    for(let j=0; j<depth.limit; j++) {
+
+    const ySubrangeLength = (depth.yRange[1] - depth.yRange[0]) / depth.limit;
+    for (let j = 0; j < depth.limit; j++) {
       const ySubrange = [
-        j*ySubrangeLength + depth.xRange[0],
-        (j+1)*ySubrangeLength + depth.xRange[0]
+        j * ySubrangeLength + depth.yRange[0],
+        (j + 1) * ySubrangeLength + depth.yRange[0]
       ];
 
       await addHeart({
-        x: randomBetween(depth.xRange[0], depth.xRange[1]),
-        y: randomBetween(ySubrange[0], ySubrange[1]),
-        z: depth.z
-      });
-    }    
-  }  
+          x: randomBetween(depth.xRange[0], depth.xRange[1]),
+          y: randomBetween(ySubrange[0], ySubrange[1]),
+          z: depth.z
+        },
+        depth.scale);
+    }
+  }
 
   // Letter.
-  const geometry = new THREE.BoxGeometry(2, 1.5, 0.05); 
-  const material = new THREE.MeshStandardMaterial( {color: 0xe8e8e8} ); 
+  const geometry = new THREE.BoxGeometry(2.7, 2, 0.05);
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xe8e8e8
+  });
   const cube = new THREE.Mesh(geometry, material);
   mainPivot.add(cube);
 
@@ -243,18 +281,18 @@ function mainRender(time) {
   }
 
   // Hearts.
-  if(animate) {
+  if (animate) {
     const deltaRot = delta * HEART_ROTATION_SPEED;
     const deltaMov = delta * HEART_FALL_SPEED;
     hearts.forEach(function(heart) {
       heart.rotation.y = heart.rotation.y + deltaRot;
-      if(heart.rotation.y > 2*Math.PI) {
-        heart.rotation.y -= 2*Math.PI;
+      if (heart.rotation.y > 2 * Math.PI) {
+        heart.rotation.y -= 2 * Math.PI;
       }
 
       heart.position.y = heart.position.y + deltaMov;
       const depth = HEARTS_DEPTHS.find(item => item.z === heart.position.z);
-      if(depth && heart.position.y > depth.yRange[1]) {
+      if (depth && heart.position.y > depth.yRange[1]) {
         heart.position.y = depth.yRange[0];
         heart.position.x = randomBetween(depth.xRange[0], depth.xRange[1]);
       }
@@ -278,7 +316,7 @@ function onPointerDown() {
 }
 
 function randomBetween(min, max) {
-  return Math.random()*(max - min) + min;
+  return Math.random() * (max - min) + min;
 }
 
 function resizeRendererToDisplaySize(renderer) {
