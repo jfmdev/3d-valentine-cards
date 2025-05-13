@@ -13,26 +13,40 @@ import {
 
 const CANVAS_SELECTOR = '#myCanvas';
 
-const COLORS = [0xe060e0, 0x60e0e0, 0x60e080];
-
-const HEARTS_POSITIONS = [
-  { 
-    end: { x: -1, y: 0, z: -1},
-    start: { x: 3, y: 0, z: 3},
+const HEARTS_POSITIONS = [{
+    end: {
+      x: -2,
+      y: 0,
+      z: -2
+    },
+    start: {
+      x: 3,
+      y: 0,
+      z: 3
+    },
   },
-  { 
-    end: { x: 1, y: 0, z: -1},
-    start: { x: -3, y: 0, z: 3},
+  {
+    end: {
+      x: 2,
+      y: 0,
+      z: -2
+    },
+    start: {
+      x: -3,
+      y: 0,
+      z: 3
+    },
   },
 ]
 
-const ANIMATION_DURATION = 2_000;
+const ANIMATION_DURATION = 1_500;
 const ROTATION_SPEED = 1.2;
 
-const INSTRUCTION = 'Touch to open';
+const INSTRUCTION = 'Touch to start';
 const TITLE = 'Happy Valentines Day!';
 
-const TEXTS = [
+const MESSAGE_COLORS = [0xFFB6C1, 0xFF69B4, 0xFFC0CB, 0xFF1493];
+const MESSAGE_TEXT = [
   'Roses are red,',
   'violets are blue',
   'Honey is sweet,',
@@ -59,19 +73,6 @@ let textPivot = null;
 let heartsPivots = null;
 
 // --- Functions --- //
-
-// TODO: Update this.
-function addTexts(messages, pivot) {
-  const textMeshes = messages.map(function(message, index) {
-    const myMesh = createTextMesh(message, COLORS[index % COLORS.length], 0.003)
-    myMesh.position.z = 1;
-    myMesh.position.y = 0.2 - (0.3 * index)
-    return myMesh
-  });
-  textMeshes.forEach(function(textMesh) {
-    pivot.add(textMesh);
-  });
-}
 
 function animationStart() {
   animating = true;
@@ -137,11 +138,14 @@ function initialize() {
   mainPivot.add(introPivot);
   textPivot = new THREE.Object3D();
   mainPivot.add(textPivot);
-  heartsPivots = HEARTS_POSITIONS.map(item => {
+  heartsPivots = HEARTS_POSITIONS.map((item, index) => {
     const heartPivot = new THREE.Object3D();
     heartPivot.position.x = item.start.x;
     heartPivot.position.y = item.start.y;
     heartPivot.position.z = item.start.z;
+    if (index % 2 === 0) {
+      heartPivot.rotation.y = Math.PI / 2;
+    }
     mainPivot.add(heartPivot);
     return heartPivot;
   })
@@ -180,17 +184,25 @@ function initialize() {
     font = loadedFont;
 
     // Add introduction texts.
-    const instructionMesh = createTextMesh(INSTRUCTION, 0xa0a040, 0.002)
+    const instructionMesh = createTextMesh(INSTRUCTION, 0xff1493, 0.002)
     instructionMesh.position.z = 1;
-    instructionMesh.position.y = -1;
+    instructionMesh.position.y = -0.5;
     introPivot.add(instructionMesh);
-    const titleMesh = createTextMesh(TITLE, 0xff8080, 0.0022)
+    const titleMesh = createTextMesh(TITLE, 0xffc0cb, 0.0022)
     titleMesh.position.z = 1;
     titleMesh.position.y = 0.5;
     introPivot.add(titleMesh);
 
-    // TODO: Add only the 'touch to open' message.
-    addTexts(TEXTS, textPivot);
+    // Love message (hidden by default).
+    const textMeshes = MESSAGE_TEXT.map(function(message, index) {
+      const myMesh = createTextMesh(message, MESSAGE_COLORS[index % MESSAGE_COLORS.length], 0.003)
+      myMesh.position.z = 0.5;
+      myMesh.position.y = 0.7 - (0.4 * index)
+      return myMesh
+    });
+    textMeshes.forEach(function(textMesh) {
+      textPivot.add(textMesh);
+    });
     textPivot.visible = false;
   });
 
@@ -217,18 +229,21 @@ function mainRender(time) {
   // Move hearts and hide/show messages.
   if (animating) {
     const progress = (new Date().getTime() - startTime) / ANIMATION_DURATION;
-    
+
     if (progress > 1) {
       animationStop();
     } else {
       heartsPivots?.forEach((pivot, index) => {
         const position = HEARTS_POSITIONS[index];
-        pivot.position.x = position.start.x + (position.end.x - position.start.x) * progress;
-        pivot.position.y = position.start.y + (position.end.y - position.start.y) * progress;
-        pivot.position.z = position.start.z + (position.end.z - position.start.z) * progress;
+        const start = reversing ? position.end : position.start;
+        const end = reversing ? position.start : position.end;
+
+        pivot.position.x = start.x + (end.x - start.x) * progress;
+        pivot.position.y = start.y + (end.y - start.y) * progress;
+        pivot.position.z = start.z + (end.z - start.z) * progress;
       })
 
-      if(progress > 0.5) {
+      if (progress > 0.5) {
         textPivot.visible = !reversing;
         introPivot.visible = reversing;
       }
