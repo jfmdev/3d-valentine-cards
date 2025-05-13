@@ -4,7 +4,7 @@ A collection of Valentine cards implemented with [Three.js](https://threejs.org/
 
 ## Usage
 
-To run the applications you first need to [download and install Node.js](https://www.python.org/downloads/).
+To run the application you first need to [download and install Node.js](https://www.python.org/downloads/).
 
 Then you can use the following commands:
 
